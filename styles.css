@@ -1,0 +1,76 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: sans-serif;
+}
+
+#game {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #78c850; /* Wiese */
+}
+
+#ui {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 32px;
+  text-align: center;
+  z-index: 100;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.0);
+  z-index: 200;
+}
+
+#overlayText {
+  color: white;
+  font-size: 64px;
+  text-align: center;
+  text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+}
+
+#chicken, #swan {
+  position: absolute;
+  z-index: 10;
+}
+
+.water {
+  position: absolute;
+  background: #3498db;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.sand {
+  position: absolute;
+  background: #e6d29e;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.tree-part {
+  position: absolute;
+  background: #0b5d1e;
+  border-radius: 50%;
+  z-index: 5;
+}
+
+.flower {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  z-index: 1;
+}
