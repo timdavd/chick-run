@@ -539,3 +539,13 @@ function spawnApples(reset = false) {
 
 // Start
 showStart();
+
+const fsBtn = document.getElementById("fullscreenBtn");
+
+fsBtn.addEventListener("click", () => {
+  if (!document.fullscreenElement) {
+    game.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+});

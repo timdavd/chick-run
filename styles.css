@@ -1,15 +1,27 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  font-family: sans-serif;
 }
 
 #game {
-  position: relative;
   width: 100vw;
   height: 100vh;
-  background: #78c850; /* Wiese */
+  position: relative;
+  background: #7ec850;
+}
+#fullscreenBtn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 999;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
 }
 
 #ui {
