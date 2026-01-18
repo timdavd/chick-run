@@ -19,16 +19,25 @@ let chickenR = 12;
 let chickenSpeed = 3.0;
 let swanBaseSpeed = 1.5;
 
+let sprintActive = false;
+let sprintTimer = 0;
+let sprintStrength = 0; // 0 → 1 (smooth)
+const SPRINT_DURATION = 4000;
+const SPRINT_BOOST = 1.5;
+
+
 let swanWidth = 40;
 let swanHeight = 80;
 let swanVX = 0;
 let swanVY = 0;
+let swanSpeedBoost = 0; // dauerhaft, durch Sprint-Äpfel
 
 let score = 0;
 let highscore = Number(localStorage.getItem("highscore") || 0);
 
 let running = false;
 let walkTime = 0;
+let walkStrength = 0; // NEU
 
 let level = 1;
 let timeLeft = 20;
@@ -39,16 +48,139 @@ const sands = [];
 const trees = [];
 const flowers = [];
 const apples = []; // Array für mehrere Äpfel
-const MAX_APPLES = 5;
-const SWAN_AVOID_DISTANCE = 80; // wie früh der Schwan ausweicht
-const SWAN_AVOID_FORCE = 1.5;  // wie stark er ausweicht
+const waterBlooms = []; // für rosa Seerosen, die Punkte geben
+const MAX_APPLES = 3;
 const SWAN_SMOOTHING = 0.15; // kleiner Wert = weichere Bewegung
+const SPRINT_APPLE_CHANCE = 0.1;
+
+
+const CHICKEN_BODY_WIDTH = 15;
+const CHICKEN_BODY_HEIGHT = 15;
+const CHICKEN_HEAD_RADIUS = 10;
 
 
 document.addEventListener("mousemove", e => {
   mouseX = e.clientX;
   mouseY = e.clientY;
 });
+
+function createChicken() {
+    chicken.innerHTML = ""; 
+    chicken.style.position = "absolute";
+    chicken.style.zIndex = 15;
+    chicken.style.pointerEvents = "none";
+
+    const bodyWidth = CHICKEN_BODY_WIDTH;
+	const bodyHeight = CHICKEN_BODY_HEIGHT;
+	const headR = CHICKEN_HEAD_RADIUS;
+
+
+    // Körper
+    const body = document.createElement("div");
+    body.style.width = bodyWidth + "px";
+    body.style.height = bodyHeight + "px";
+    body.style.backgroundColor = "gold";
+    body.style.borderRadius = "50% / 50%";
+    body.style.position = "absolute";
+    body.style.left = "0px";
+    body.style.top = headR + "px"; 
+    chicken.appendChild(body);
+
+    // Kopf (kleiner Kreis oben)
+    const head = document.createElement("div");
+    head.style.width = headR*2 + "px";
+    head.style.height = headR*2 + "px";
+    head.style.backgroundColor = "gold";
+    head.style.borderRadius = "50%";
+    head.style.position = "absolute";
+    head.style.left = (bodyWidth/2 - headR) + "px";
+    head.style.top = "0px"; 
+    chicken.appendChild(head);
+
+    // Augen
+    const eyeR = chickenR * 0.3;
+    const eyeLeft = document.createElement("div");
+    eyeLeft.style.width = eyeR + "px";
+    eyeLeft.style.height = eyeR + "px";
+    eyeLeft.style.backgroundColor = "black";
+    eyeLeft.style.borderRadius = "50%";
+    eyeLeft.style.position = "absolute";
+    eyeLeft.style.left = (bodyWidth/2 - headR + eyeR) + "px";
+    eyeLeft.style.top = headR*0.7 + "px";
+    chicken.appendChild(eyeLeft);
+
+    const eyeRight = document.createElement("div");
+    eyeRight.style.width = eyeR + "px";
+    eyeRight.style.height = eyeR + "px";
+    eyeRight.style.backgroundColor = "black";
+    eyeRight.style.borderRadius = "50%";
+    eyeRight.style.position = "absolute";
+    eyeRight.style.left = (bodyWidth/2 - headR + eyeR + eyeR*1.5) + "px";
+    eyeRight.style.top = headR*0.7 + "px";
+    chicken.appendChild(eyeRight);
+
+    // Schnabel
+    const beak = document.createElement("div");
+    beak.style.width = "0";
+    beak.style.height = "0";
+    beak.style.borderLeft = `${eyeR}px solid transparent`;
+    beak.style.borderRight = `${eyeR}px solid transparent`;
+    beak.style.borderTop = `${eyeR*1.2}px solid orange`;
+    beak.style.position = "absolute";
+    beak.style.left = (bodyWidth/2 - headR + headR*0.4) + "px";
+    beak.style.top = headR + "px";
+    chicken.appendChild(beak);
+
+    // Flügel links
+    const wingLeft = document.createElement("div");
+    wingLeft.style.width = chickenR*1.2 + "px";
+    wingLeft.style.height = chickenR*0.8 + "px";
+    wingLeft.style.backgroundColor = "gold";
+    wingLeft.style.borderRadius = "50% / 50%";
+    wingLeft.style.position = "absolute";
+    wingLeft.style.left = -chickenR*0.6 + "px";
+    wingLeft.style.top = bodyHeight*0.4 + headR + "px";
+    wingLeft.style.transform = "rotate(15deg)";
+    chicken.appendChild(wingLeft);
+
+    // Flügel rechts
+    const wingRight = document.createElement("div");
+    wingRight.style.width = chickenR*1.2 + "px";
+    wingRight.style.height = chickenR*0.8 + "px";
+    wingRight.style.backgroundColor = "gold";
+    wingRight.style.borderRadius = "50% / 50%";
+    wingRight.style.position = "absolute";
+    wingRight.style.left = bodyWidth - chickenR*0.6 + "px";
+    wingRight.style.top = bodyHeight*0.4 + headR + "px";
+    wingRight.style.transform = "rotate(-15deg)";
+    chicken.appendChild(wingRight);
+
+    // Füße
+    const footLeft = document.createElement("div");
+    footLeft.style.width = chickenR*0.5 + "px";
+    footLeft.style.height = chickenR*0.8 + "px";
+    footLeft.style.backgroundColor = "orange";
+    footLeft.style.position = "absolute";
+    footLeft.style.left = bodyWidth*0.3 + "px";
+    footLeft.style.top = bodyHeight + headR + "px";
+    footLeft.style.borderRadius = "50% / 30%";
+    chicken.appendChild(footLeft);
+
+    const footRight = document.createElement("div");
+    footRight.style.width = chickenR*0.5 + "px";
+    footRight.style.height = chickenR*0.8 + "px";
+    footRight.style.backgroundColor = "orange";
+    footRight.style.position = "absolute";
+    footRight.style.left = bodyWidth*0.6 + "px";
+    footRight.style.top = bodyHeight + headR + "px";
+    footRight.style.borderRadius = "50% / 30%";
+    chicken.appendChild(footRight);
+
+    // Position auf Mauszeiger zentrieren
+    chicken.style.left = Math.round(chickenX - bodyWidth / 2) + "px";
+    chicken.style.top  = Math.round(chickenY - (bodyHeight/2 + headR)) + "px";
+}
+
 
 /* ---------- START ---------- */
 function showStart() {
@@ -68,18 +200,19 @@ function showStart() {
 
 /* ---------- START GAME ---------- */
 function startGame() {
-  running = true;
+    running = true;
 
-  chickenX = mouseX;
-  chickenY = mouseY;
+    chickenX = mouseX;
+    chickenY = mouseY;
 
-  swanX = mouseX < innerWidth / 2 ? innerWidth - 150 : 150;
-  swanY = mouseY < innerHeight / 2 ? innerHeight - 150 : 150;
+    swanX = mouseX < innerWidth / 2 ? innerWidth - 150 : 150;
+    swanY = mouseY < innerHeight / 2 ? innerHeight - 150 : 150;
 
-  chicken.style.width = chickenR*2 + "px";
-  chicken.style.height = chickenR*2 + "px";
-  chicken.style.backgroundColor = "gold";
-  chicken.style.borderRadius = "50%";
+    chickenR = 12;       // Größe des Kükenkörpers
+    chickenSpeed = 3.0;
+
+    createChicken();      // 🆕 hier
+
 
   swanWidth = 40;
   swanHeight = 80;
@@ -87,6 +220,8 @@ function startGame() {
   swan.style.height = swanHeight + "px";
   swan.style.backgroundColor = "white";
   swan.style.borderRadius = "20px";
+  swan.style.zIndex = 16; // größer als chicken.style.zIndex = 15
+
 
   clearEnvironment();
   spawnEnvironmentLevel(level);
@@ -140,130 +275,207 @@ function startLevelTimer() {
 }
 
 /* ---------- LOOP ---------- */
-function loop(){
-  if(!running) return;
-
-  walkTime += 0.05;
-  const jump = Math.sin(walkTime)*3;
+function loop() {
+  if (!running) return;
 
   // Score + Timer
   scoreEl.textContent = `Score: ${score}`;
   timerEl.textContent = timeLeft;
 
-  // Küken Bewegung
+  // ---------- Küken Bewegung ----------
   let speed = chickenSpeed;
-  if(waters.some(w=>Math.hypot(chickenX-w.x, chickenY-w.y)<w.r)) speed*=0.3;
-  if(sands.some(s=>Math.hypot(chickenX-s.x, chickenY-s.y)<s.r)) speed*=0.6;
+ 
+ // ---------- Sprint ----------
+if (sprintActive) {
+  sprintTimer -= 16;
+
+  sprintStrength += (1 - sprintStrength) * 0.15;
+
+  if (sprintTimer <= 0) {
+    sprintActive = false;
+  }
+} else {
+  sprintStrength += (0 - sprintStrength) * 0.15;
+}
+
+// Sprint-Boost anwenden
+speed += sprintStrength * SPRINT_BOOST;
+
+ if (!sprintActive) {
+  if (waters.some(w => Math.hypot(chickenX - w.x, chickenY - w.y) < w.r)) speed *= 0.3;
+  if (sands.some(s => Math.hypot(chickenX - s.x, chickenY - s.y) < s.r)) speed *= 0.6;
+}
+
 
   const dx = mouseX - chickenX;
   const dy = mouseY - chickenY;
   const len = Math.hypot(dx, dy);
-  if(len>0){ chickenX += (dx/len)*speed; chickenY += (dy/len)*speed; }
-  // 🌳 Huhn kollidiert mit Bäumen
+
+  if (len > 10) {
+    chickenX += (dx / len) * speed;
+    chickenY += (dy / len) * speed;
+
+    // WalkStrength sanft anpassen
+    const moveSpeed = Math.min(len, chickenSpeed);
+    const animStrength = moveSpeed / chickenSpeed;
+    walkStrength += (animStrength - walkStrength) * 0.25;
+
+    // WalkTime hochzählen für Jump
+    walkTime += 0.2 + walkStrength * 0.3;
+  } else {
+    walkStrength *= 0.85;
+    if (walkStrength < 0.01) walkStrength = 0;
+  }
+
+  // Jump-Höhe Küken
+  const chickenJump = walkStrength > 0 ? Math.sin(walkTime) * walkStrength * 5 : 0;
+
+  // ---------- Baum-Kollision ----------
+  trees.forEach(t => {
+    const dx = chickenX - t.x;
+    const dy = chickenY - t.y;
+    const dist = Math.hypot(dx, dy);
+    const minDist = chickenR + t.r;
+    if (dist < minDist && dist > 0) {
+      const pushX = dx / dist;
+      const pushY = dy / dist;
+      chickenX = t.x + pushX * minDist;
+      chickenY = t.y + pushY * minDist;
+    }
+  });
+
+  // Position Küken
+  // Position exakt auf Mauszeiger
+const bodyWidth = CHICKEN_BODY_WIDTH;
+const bodyHeight = CHICKEN_BODY_HEIGHT;
+const headR = CHICKEN_HEAD_RADIUS;
+
+
+chicken.style.left = Math.round(chickenX - bodyWidth / 2) + "px";
+chicken.style.top  = Math.round(chickenY - (bodyHeight/2 + headR) + chickenJump) + "px";
+
+
+
+
+  // ---------- Swan-Bewegung ----------
+let targetX = chickenX;
+let targetY = chickenY;
+
+// 🏃‍♂️ Schwan sucht Sprint-Äpfel
+const sprintApples = apples.filter(a => a.sprint);
+if (sprintApples.length > 0) {
+  // wähle den nächsten Sprint-Apfel
+  const closestApple = sprintApples.reduce((prev, curr) => {
+    const dPrev = Math.hypot(swanX - prev.x, swanY - prev.y);
+    const dCurr = Math.hypot(swanX - curr.x, swanY - curr.y);
+    return dCurr < dPrev ? curr : prev;
+  });
+  targetX = closestApple.x;
+  targetY = closestApple.y;
+}
+
+// Richtung normalisieren
+let vx = targetX - swanX;
+let vy = targetY - swanY;
+let vlen = Math.hypot(vx, vy);
+if (vlen > 0) { vx /= vlen; vy /= vlen; }
+
+// Speed: Basis + Boost + Dauerboost durch gesammelte Sprint-Äpfel
+let spd = swanBaseSpeed + swanSpeedBoost;
+if (waters.some(w => Math.hypot(swanX - w.x, swanY - w.y) < w.r + 80)) spd *= 1.5;
+
+// Smooth Swan-Movement
+swanVX += (vx * spd - swanVX) * SWAN_SMOOTHING;
+swanVY += (vy * spd - swanVY) * SWAN_SMOOTHING;
+swanX += swanVX;
+swanY += swanVY;
+
+  
+  // ---------- Swan-Baum-Kollision ----------
 trees.forEach(t => {
-  const dx = chickenX - t.x;
-  const dy = chickenY - t.y;
+  const dx = swanX - t.x;
+  const dy = swanY - t.y;
   const dist = Math.hypot(dx, dy);
 
-  const minDist = chickenR + t.r;
+  const swanRadius = 30; // grobe Größe vom Schwan
+  const minDist = swanRadius + t.r;
 
   if (dist < minDist && dist > 0) {
     const pushX = dx / dist;
     const pushY = dy / dist;
 
-    // sanftes Zurückschieben
-    chickenX = t.x + pushX * minDist;
-    chickenY = t.y + pushY * minDist;
+    swanX = t.x + pushX * minDist;
+    swanY = t.y + pushY * minDist;
   }
 });
 
-  chicken.style.left = chickenX - chickenR + "px";
-  chicken.style.top = chickenY - chickenR + jump + "px";
 
-  // Zielrichtung inkl. Baum-Ausweichung
-let vx = chickenX - swanX;
-let vy = chickenY - swanY;
-let vlen = Math.hypot(vx, vy);
-if (vlen > 0) {
-  vx /= vlen;
-  vy /= vlen;
-}
+  // ---------- Swan Jump ----------
+  if (!swan.walkTime) swan.walkTime = 0; // einmal initialisieren
+  swan.walkTime += 0.10; // viel langsamer als Chicken
+  const swanJump = Math.sin(swan.walkTime) * 3; // kleiner Sprung
+  swan.style.left = swanX - swanWidth / 2 + "px";
+  swan.style.top  = swanY - swanHeight / 2 + swanJump + "px";
 
-let spd = swanBaseSpeed;
-
-// schneller im Wasser
-const nearWater = waters.some(
-  w => Math.hypot(swanX - w.x, swanY - w.y) < w.r + 80
-);
-if (nearWater) spd *= 2;
-
-// 🌳 Baum-Ausweichlogik
-let avoidX = 0;
-let avoidY = 0;
-
-trees.forEach(t => {
-  const dx = t.x - swanX;
-  const dy = t.y - swanY;
-  const dist = Math.hypot(dx, dy);
-
-  if (dist < SWAN_AVOID_DISTANCE + t.r) {
-    const dot = dx * vx + dy * vy;
-    if (dot > 0) {
-      avoidX += -dy / dist;
-      avoidY += dx / dist;
-    }
-  }
-});
-
-// Ziel + Ausweichen mischen
-vx += avoidX * SWAN_AVOID_FORCE;
-vy += avoidY * SWAN_AVOID_FORCE;
-
-// Richtung normalisieren
-let finalLen = Math.hypot(vx, vy);
-if (finalLen > 0) {
-  vx /= finalLen;
-  vy /= finalLen;
-}
-
-// 🌊 Bewegung mit gleitender Geschwindigkeit (smooth)
-swanVX += (vx * spd - swanVX) * SWAN_SMOOTHING;
-swanVY += (vy * spd - swanVY) * SWAN_SMOOTHING;
-
-swanX += swanVX;
-swanY += swanVY;
-
-swan.style.left = swanX - swanWidth / 2 + "px";
-swan.style.top = swanY - swanHeight / 2 + "px";
-
-
-
-  // Apfel sammeln
+ // ---------- Apfel sammeln ----------
 for (let i = apples.length - 1; i >= 0; i--) {
   const a = apples[i];
   const d = Math.hypot(chickenX - a.x, chickenY - a.y);
-  if (d < chickenR + 8) { // Apfelgröße ~16px
-    score++;
-    chickenR += 0.1;
-    chickenSpeed += 0.005;
 
-    chicken.style.width = chickenR*2 + "px";
-    chicken.style.height = chickenR*2 + "px";
+  if (d < chickenR + 20) {
 
-    // Apfel entfernen
+    if (a.sprint) {
+      // 🍏 Sprint-Apfel
+      // 🍏 Sprint-Apfel
+	sprintActive = true;
+	sprintTimer = SPRINT_DURATION;
+
+
+    } else {
+      // 🍎 Normaler Apfel
+      score++;
+    }
+
+    a.div.remove();
+    apples.splice(i, 1);
+    spawnApples(false);
+  }
+  }
+
+// ---------- Seerosen sammeln ----------
+for (let i = waterBlooms.length - 1; i >= 0; i--) {
+  const b = waterBlooms[i];
+  const d = Math.hypot(chickenX - b.x, chickenY - b.y);
+
+  if (d < chickenR + b.r) {
+    score += 50; // Bonuspunkte
+    b.div.remove(); // Blüte vom Spielfeld entfernen
+    waterBlooms.splice(i, 1); // aus Array entfernen
+  }
+}
+// ---------- Schwan sammelt Sprint-Äpfel ----------
+for (let i = apples.length - 1; i >= 0; i--) {
+  const a = apples[i];
+  const d = Math.hypot(swanX - a.x, swanY - a.y);
+
+  if (d < 20 && a.sprint) { // Nähe prüfen, z.B. 20px
+    swanSpeedBoost += 0.2;   // dauerhafter Boost
     a.div.remove();
     apples.splice(i, 1);
 
+    // Optional: neuen Apfel spawnen
     spawnApples(false);
   }
 }
 
 
-  // Schwan-Kollision
-  if(Math.hypot(chickenX-swanX, chickenY-swanY)<chickenR+30) gameOver();
+  // ---------- Schwan-Kollision ----------
+  if (Math.hypot(chickenX - swanX, chickenY - swanY) < chickenR + 30) gameOver();
 
   requestAnimationFrame(loop);
 }
+
+
 
 /* ---------- GAME OVER ---------- */
 function gameOver(){
@@ -275,16 +487,30 @@ function gameOver(){
 
   if(score>highscore){ highscore=score; localStorage.setItem("highscore",highscore); }
 
+  
   setTimeout(()=>{
     score=0; level=1; chickenR=12; chickenSpeed=3.0;
     clearEnvironment();
     flowers.length=0;
+	swanSpeedBoost = 0;
     showStart();
   },1000);
 }
 
 /* ---------- ENVIRONMENT ---------- */
-function clearEnvironment(){document.querySelectorAll(".water,.sand,.tree-part,.flower").forEach(e=>e.remove()); waters.length=0; sands.length=0; trees.length=0; flowers.length=0;}
+
+function clearEnvironment() {
+  document.querySelectorAll(".water,.sand,.tree-part,.flower").forEach(e => e.remove());
+  waters.length = 0;
+  sands.length = 0;
+  trees.length = 0;
+  flowers.length = 0;
+  
+  // 💖 alle rosa Blüten entfernen
+  waterBlooms.forEach(b => b.div.remove());
+  waterBlooms.length = 0;
+}
+
 function spawnEnvironmentLevel(lvl){for(let i=0;i<2+lvl-1;i++) spawnWobblyWater(); for(let i=0;i<3+lvl-1;i++) spawnTree();}
 
 function spawnWobblyWater(){
@@ -307,7 +533,7 @@ function spawnWobblyWater(){
   waters.push({x,y,r});
 
 // Seerose: 20% Chance
-  if (Math.random() < 0.2) {
+  if (Math.random() < 0.5) {
     const offsetX = (Math.random() - 0.5) * r;
     const offsetY = (Math.random() - 0.5) * r;
     const lx = x + offsetX;
@@ -333,24 +559,53 @@ function spawnWobblyWater(){
     }
 
     // 33% Chance rosa Blüte
-    if (Math.random() < 0.33) {
-      const bloomRadius = 6;
-      const bloomSize = 6 + Math.random()*2;
-      for (let b = 0; b < 4; b++) {
-        const angle = (Math.PI/2) * b;
-        const bloom = document.createElement("div");
-        bloom.className = "flower";
-        bloom.style.width = bloomSize + "px";
-        bloom.style.height = bloomSize + "px";
-        bloom.style.backgroundColor = "pink";
-        bloom.style.borderRadius = "50%";
-        bloom.style.position = "absolute";
-        bloom.style.left = (lx + Math.cos(angle)*bloomRadius - bloomSize/2) + "px";
-        bloom.style.top = (ly + Math.sin(angle)*bloomRadius - bloomSize/2) + "px";
-        bloom.style.zIndex = 4;
-        game.appendChild(bloom);
-      }
-    }
+if (Math.random() < 0.4) {
+  const bloomRadius = 8; // kleineres Blatt
+  const bloomContainer = document.createElement("div");
+  bloomContainer.style.position = "absolute";
+  bloomContainer.style.width = bloomRadius * 4 + "px";  // genug Platz für Blätter
+  bloomContainer.style.height = bloomRadius * 4 + "px";
+  bloomContainer.style.left = (lx - bloomRadius*2) + "px"; 
+  bloomContainer.style.top  = (ly - bloomRadius*2) + "px"; 
+  bloomContainer.style.zIndex = 4;
+  game.appendChild(bloomContainer);
+
+  // Versatz der vier Blätter – stärker überlappend
+  const offsets = [
+    [-0.2, -0.2],
+    [0.2, -0.2],
+    [-0.2, 0.2],
+    [0.2, 0.2]
+  ];
+
+  offsets.forEach(off => {
+    const petal = document.createElement("div");
+    petal.style.width = bloomRadius + "px";
+    petal.style.height = bloomRadius + "px";
+    petal.style.backgroundColor = "pink";
+    petal.style.borderRadius = "50%";
+    petal.style.position = "absolute";
+
+    // Blatt positionieren stark überlappend in der Mitte
+    petal.style.left = (bloomRadius*2 + off[0]*bloomRadius) - bloomRadius/2 + "px";
+    petal.style.top  = (bloomRadius*2 + off[1]*bloomRadius) - bloomRadius/2 + "px";
+
+    bloomContainer.appendChild(petal);
+  });
+
+  // 💖 Ein Objekt für das Spiel
+  waterBlooms.push({
+    x: lx,              // Mittelpunkt für Kollision
+    y: ly,
+    r: bloomRadius,     // Radius für Kollision
+    div: bloomContainer
+  });
+}
+
+
+
+
+
 }
 
   const sandLayers=5;
@@ -374,6 +629,7 @@ function spawnWobblyWater(){
       sand.style.opacity=0.5+Math.random()*0.4;
       game.appendChild(sand);
       sands.push({x:sx,y:sy,r:sr});
+	  sand.style.zIndex = 1;
     }
   }
 }
@@ -479,7 +735,7 @@ function spawnApples(reset = false) {
 
   // Wie viele neue Äpfel?
   let spawnCount = reset
-    ? 1 + Math.floor(Math.random() * 3)   // 1–3 beim Start
+    ? 1 + Math.floor(Math.random() * 2)   // 1–2 beim Start
     : Math.floor(Math.random() * 3);      // 0–2 beim Essen
 
   // Maximalgrenze beachten
@@ -519,22 +775,45 @@ function spawnApples(reset = false) {
 
     }
 
+const isSprint = Math.random() < SPRINT_APPLE_CHANCE;
     const apple = document.createElement("div");
-    apple.className = "apple";
-    apple.textContent = "🍎";
-    apple.style.position = "absolute";
-    apple.style.left = x + "px";
-    apple.style.top = y + "px";
-    apple.style.fontSize = "16px";
+apple.className = "apple";
+apple.style.position = "absolute";
+apple.style.left = x + "px";
+apple.style.top  = y + "px";
+apple.textContent = "🍎";
 
-    game.appendChild(apple);
-    apples.push({ x, y, div: apple });
+
+if (isSprint) {
+  apple.textContent = "🍎";
+  apple.style.textShadow =
+    "0 0 6px gold, 0 0 12px gold, 0 0 18px rgba(255,215,0,0.8)";
+  apple.style.animation = "goldPulse 1s infinite alternate";
+}
+
+
+
+apple.style.zIndex = 10;
+
+game.appendChild(apple);
+
+apples.push({
+  x,
+  y,
+  div: apple,
+  sprint: isSprint
+});
+
+
   }
 
   // 🛡️ Garantie: mindestens 1 Apfel
   if (apples.length === 0 && trees.length > 0) {
     spawnApples(true); // erzwingt 1–3 → durch MAX_APPLES max. 1
   }
+  
+
+
 }
 
 // Start

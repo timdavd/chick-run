@@ -5,6 +5,11 @@ html, body {
   height: 100%;
   overflow: hidden;
 }
+/* Globaler Font für alles */
+body, html, #game, #ui, #overlay, #overlayText, #overlayHighscore, #chicken, #swan, #apple {
+  font-family: 'Lato', sans-serif;
+  font-weight: 700; /* Bold */
+}
 
 #game {
   width: 100vw;
@@ -85,4 +90,14 @@ html, body {
   height: 6px;
   border-radius: 50%;
   z-index: 1;
+}
+@keyframes goldPulse {
+  from {
+    transform: scale(1);
+    filter: brightness(1.2);
+  }
+  to {
+    transform: scale(1.15);
+    filter: brightness(1.8);
+  }
 }
