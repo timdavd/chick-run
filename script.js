@@ -14,7 +14,7 @@ const startBtn = document.getElementById("startBtn");
 
 // 🔹 Startbutton blockieren
 startBtn.disabled = true;
-startBtn.textContent = "Verbindung wird aufgebaut…";
+startBtn.textContent = "connecting..";
 
 
 // 🔹 Firebase Config
@@ -36,7 +36,7 @@ let firebaseReady = false;
 
 // 🔹 Startbutton blockieren bis Firebase bereit
 startBtn.disabled = true;
-startBtn.textContent = "Verbindung wird aufgebaut…";
+startBtn.textContent = "connecting..";
 
 // 🔹 Anonymer Login + Startbutton aktivieren
 auth.signInAnonymously()
@@ -49,11 +49,11 @@ auth.signInAnonymously()
 
     // Startbutton freigeben
     startBtn.disabled = false;
-    startBtn.textContent = "Spiel starten";
+    startBtn.textContent = "start";
   })
   .catch(err => {
     console.error("Firebase Login fehlgeschlagen:", err);
-    startBtn.textContent = "Fehler bei der Verbindung";
+    startBtn.textContent = "cannot connect";
   });
 
 
@@ -62,12 +62,12 @@ startBtn.addEventListener("click", () => {
   const input = document.getElementById("nameInput").value.trim();
 
   if (input.length < 2) {
-    alert("Bitte einen Namen eingeben");
+    alert("don't you have a name?");
     return;
   }
 
   if (!firebaseReady) {
-    alert("Verbindung zum Online-Highscore wird aufgebaut… Bitte kurz warten!");
+    alert("connecting to online-highscore");
     return;
   }
 
@@ -80,7 +80,7 @@ startBtn.addEventListener("click", () => {
 
 function saveScore(playerName, score) {
   if (!firebaseReady) {
-    console.warn("Firebase noch nicht bereit. Versuche in 500ms erneut.");
+    console.warn("try again in 500ms");
     setTimeout(() => saveScore(playerName, score), 500);
     return;
   }
@@ -427,8 +427,8 @@ function loop() {
   if (!running) return;
 
   // Score + Timer
-	levelEl.textContent = `LEVEL ${level}`;
-scoreEl.textContent = `SCORE ${score}`;
+levelEl.textContent = `LEVEL ${level}`;
+scoreEl.textContent = `score: ${score}`;
 timerEl.textContent = timeLeft;
 
 
