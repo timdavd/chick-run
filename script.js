@@ -144,6 +144,8 @@ const SWAN_SMOOTHING = 0.15; // kleiner Wert = weichere Bewegung
 const SPRINT_APPLE_CHANCE = 0.1;
 
 
+
+
 const CHICKEN_BODY_WIDTH = 15;
 const CHICKEN_BODY_HEIGHT = 15;
 const CHICKEN_HEAD_RADIUS = 10;
@@ -165,7 +167,7 @@ function updateOnlineHighscores() {
 
   db.ref('highscores')
     .orderByChild('score')
-    .limitToLast(10)
+    .limitToLast(5)
     .once('value', snapshot => {
       const data = snapshot.val();
 
@@ -317,7 +319,12 @@ function createChicken() {
 /* ---------- START ---------- */
 function showStart() {
   running = false;
-  hideGameUI();
+	hideGameUI();
+	overlayHighscore.style.display = "block"; // 🔹 Highscores im Startscreen sichtbar
+	updateOnlineHighscores();                 // Highscore-Liste aktualisieren
+	nameInput.style.display = "block";        // Namensfeld
+	startBtn.style.display = "block";         // Startbutton
+	
   overlay.style.display = "flex";
   overlayText.innerHTML = `chick&run`;
   overlayText.style.fontSize = "64px";
@@ -366,6 +373,7 @@ function startGame() {
   chickenR = 12;
   chickenSpeed = 3.0;
 
+  overlayHighscore.style.display = "none"; // 🔹 Highscores ausblenden
   startLevelTimer();
   requestAnimationFrame(loop);
 }
@@ -384,9 +392,15 @@ function startLevelTimer() {
     clearInterval(levelInterval);
     running = false;
 
-    overlay.style.display = "flex";
-    overlayText.innerHTML = `LEVEL COMPLETE!<br>Score: ${score}`;
-    overlayText.style.fontSize = "48px";
+	overlay.style.display = "flex";
+	overlayText.innerHTML = `LEVEL COMPLETE!<br>Score: ${score}`;
+	overlayText.style.fontSize = "48px";
+
+	// 🔹 Highscores, Namensfeld und Button ausblenden
+	overlayHighscore.style.display = "none";
+	nameInput.style.display = "none";
+	startBtn.style.display = "none";
+
 
     level++;
     levelEl.textContent = level;
@@ -416,6 +430,7 @@ function loop() {
 	levelEl.textContent = `LEVEL ${level}`;
 scoreEl.textContent = `SCORE ${score}`;
 timerEl.textContent = timeLeft;
+
 
 
   // ---------- Küken Bewegung ----------
@@ -617,8 +632,14 @@ for (let i = apples.length - 1; i >= 0; i--) {
 function gameOver() {
   running = false;
   overlay.style.display = "flex";
-  overlayText.innerHTML = `GAME OVER<br>Score: ${score}`;
-  overlayText.style.fontSize="64px";
+	overlayText.innerHTML = `GAME OVER<br>Score: ${score}`;
+	overlayText.style.fontSize="64px";
+
+	// 🔹 Highscores, Namensfeld und Button ausblenden
+	overlayHighscore.style.display = "none";
+	nameInput.style.display = "none";
+	startBtn.style.display = "none";
+
 
   // Local Highscore
   if(score > highscore){ 
@@ -889,22 +910,18 @@ function spawnApples(reset = false) {
     : Math.floor(Math.random() * 3);      // 0–2 beim Essen
 
   // Maximalgrenze beachten
-  spawnCount = Math.min(
-    spawnCount,
-    MAX_APPLES - apples.length
-  );
+  spawnCount = Math.min(spawnCount, MAX_APPLES - apples.length);
 
   for (let i = 0; i < spawnCount; i++) {
-
     if (trees.length === 0) break;
 
     let x, y, safe = false;
-    const minDist = 80;
-    const maxDist = 120;
-	const edgeMargin = 40; // Abstand zum Spielfeldrand
-	const waterMargin = 40; // zusätzlicher Abstand zum Wasser
+    const minDist = 100;
+    const maxDist = 150;
+    const edgeMargin = 40; // Abstand zum Spielfeldrand
+    const waterMargin = 40; // Abstand zum Wasser
 
-
+    // Finde eine sichere Position
     while (!safe) {
       const tree = trees[Math.floor(Math.random() * trees.length)];
       const angle = Math.random() * Math.PI * 2;
@@ -914,57 +931,88 @@ function spawnApples(reset = false) {
       y = tree.y + Math.sin(angle) * dist;
 
       safe =
-  // nicht zu nah am Wasser
-  !waters.some(w => Math.hypot(x - w.x, y - w.y) < w.r + waterMargin) &&
-
-  // nicht am Spielfeldrand
-  x > edgeMargin &&
-  x < innerWidth - edgeMargin &&
-  y > edgeMargin &&
-  y < innerHeight - edgeMargin;
-
+        !waters.some(w => Math.hypot(x - w.x, y - w.y) < w.r + waterMargin) &&
+        x > edgeMargin && x < innerWidth - edgeMargin &&
+        y > edgeMargin && y < innerHeight - edgeMargin;
     }
 
-const isSprint = Math.random() < SPRINT_APPLE_CHANCE;
+    // Sprint-Apfel?
+    const isSprint = Math.random() < SPRINT_APPLE_CHANCE;
+
+    // Apfel erstellen
     const apple = document.createElement("div");
-apple.className = "apple";
-apple.style.position = "absolute";
-apple.style.left = x + "px";
-apple.style.top  = y + "px";
-apple.textContent = "🍎";
+    apple.className = "apple";
+    apple.style.position = "absolute";
+    apple.style.left = x + "px";
+    apple.style.top = y + "px";
+    apple.textContent = isSprint ? "🍏" : "🍎"; // Sprint-Apfel 🍏
+    apple.style.zIndex = 4;
 
+    // Apfel zuerst unsichtbar für 10ms
+    apple.style.opacity = 0;
+    setTimeout(() => {
+      apple.style.opacity = 1;
+    }, 10);
 
-if (isSprint) {
-  apple.textContent = "🍎";
-  apple.style.textShadow =
-    "0 0 6px gold, 0 0 12px gold, 0 0 18px rgba(255,215,0,0.8)";
-  apple.style.animation = "goldPulse 1s infinite alternate";
-}
+    // Dezente goldene Animation für Sprint-Äpfel
+    if (isSprint) {
+      apple.style.textShadow =
+        "0 0 2px gold, 0 0 4px gold, 0 0 6px rgba(255,215,0,0.4)";
+      apple.style.animation = "goldPulse 1s infinite alternate";
+    }
 
+    game.appendChild(apple);
 
+    // Finde den Baum, der dem Apfel am nächsten ist
+    let closestTree = trees[0];
+    let minDistToTree = Math.hypot(x - trees[0].x, y - trees[0].y);
+    for (const t of trees) {
+      const d = Math.hypot(x - t.x, y - t.y);
+      if (d < minDistToTree) {
+        minDistToTree = d;
+        closestTree = t;
+      }
+    }
 
-apple.style.zIndex = 10;
+    // Animation vom nächsten Baum starten
+    animateAppleFromTree(closestTree.x, closestTree.y, x, y, apple);
 
-game.appendChild(apple);
-
-apples.push({
-  x,
-  y,
-  div: apple,
-  sprint: isSprint
-});
-
-
+    // Apfel ins Array
+    apples.push({
+      x,
+      y,
+      div: apple,
+      sprint: isSprint
+    });
   }
 
   // 🛡️ Garantie: mindestens 1 Apfel
   if (apples.length === 0 && trees.length > 0) {
-    spawnApples(true); // erzwingt 1–3 → durch MAX_APPLES max. 1
+    spawnApples(true); // erzwingt 1–3 Äpfel
   }
-  
-
-
 }
+
+
+
+function animateAppleFromTree(treeX, treeY, appleX, appleY, appleDiv) {
+    const startX = treeX;
+    const startY = treeY;
+    const targetX = appleX;
+    const targetY = appleY;
+    const duration = 300 + Math.random() * 200;
+    const startTime = performance.now();
+
+    function animate(time) {
+        const t = Math.min((time - startTime)/duration,1);
+        const ease = t*t; // Beschleunigtes Fallen
+        appleDiv.style.left = startX + (targetX - startX) * ease + "px";
+        appleDiv.style.top  = startY + (targetY - startY) * ease + "px";
+        if(t < 1) requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+}
+
+
 
 // Start
 showStart();
