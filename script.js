@@ -319,12 +319,21 @@ function createChicken() {
 /* ---------- START ---------- */
 function showStart() {
   running = false;
+	
 	hideGameUI();
 	overlayHighscore.style.display = "block"; // 🔹 Highscores im Startscreen sichtbar
 	updateOnlineHighscores();                 // Highscore-Liste aktualisieren
 	nameInput.style.display = "block";        // Namensfeld
 	startBtn.style.display = "block";         // Startbutton
 	
+// Küken und Schwan ausblenden
+  chicken.style.display = "none";
+  swan.style.display = "none";
+
+  // Alle Äpfel ausblenden/entfernen
+  apples.forEach(a => a.div.remove());
+  apples.length = 0;
+  
   overlay.style.display = "flex";
   overlayText.innerHTML = `chick&run`;
   overlayText.style.fontSize = "64px";
@@ -333,7 +342,6 @@ function showStart() {
   clearEnvironment();
   chickenX = innerWidth / 2;
   chickenY = innerHeight / 2;
-  spawnEnvironmentLevel(1);
   spawnFlowers(60);
 }
 
@@ -343,7 +351,11 @@ function showStart() {
 function startGame() {
     running = true;
 	showGameUI();
-    chickenX = mouseX;
+    
+	chicken.style.display = "block";
+	swan.style.display = "block";
+	
+	chickenX = mouseX;
     chickenY = mouseY;
 
     swanX = mouseX < innerWidth / 2 ? innerWidth - 150 : 150;
@@ -631,17 +643,25 @@ for (let i = apples.length - 1; i >= 0; i--) {
 /* ---------- GAME OVER ---------- */
 function gameOver() {
   running = false;
+
+  // Level-Timer stoppen
+  clearInterval(levelInterval);
+
+  // Overlay anzeigen
   overlay.style.display = "flex";
-	overlayText.innerHTML = `GAME OVER<br>Score: ${score}`;
-	overlayText.style.fontSize="64px";
+  overlayText.innerHTML = `GAME OVER<br>Score: ${score}`;
+  overlayText.style.fontSize = "64px";
 
-	// 🔹 Highscores, Namensfeld und Button ausblenden
-	overlayHighscore.style.display = "none";
-	nameInput.style.display = "none";
-	startBtn.style.display = "none";
+  // UI ausblenden
+  overlayHighscore.style.display = "none";
+  nameInput.style.display = "none";
+  startBtn.style.display = "none";
 
+  // Küken und Schwan ausblenden
+  chicken.style.display = "none";
+  swan.style.display = "none";
 
-  // Local Highscore
+  // Local Highscore speichern
   if(score > highscore){ 
     highscore = score; 
     localStorage.setItem("highscore", highscore); 
@@ -652,18 +672,25 @@ function gameOver() {
     saveScore(playerName, score);
   }
 
+  // Nach kurzer Zeit zurück zum Startscreen
   setTimeout(() => {
     score = 0;
     level = 1;
     chickenR = 12;
     chickenSpeed = 3.0;
+    swanSpeedBoost = 0;
+
     clearEnvironment();
     flowers.length = 0;
-    swanSpeedBoost = 0;
+
+    // Küken und Schwan wieder sichtbar machen, wenn Spiel startet
+    chicken.style.display = "block";
+    swan.style.display = "block";
 
     showStart();
   }, 1000);
 }
+
 
 
 
